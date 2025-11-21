@@ -1,6 +1,3 @@
-Here’s a fresh README you can paste直接覆蓋掉 GitHub 上的 `README.md`：
-
-````markdown
 # Game Library – COMP3810SEF Group Project
 
 A simple **Game Backlog Manager** built with **Node.js + Express + MongoDB (Mongoose) + EJS**.
