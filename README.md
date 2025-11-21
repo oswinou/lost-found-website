@@ -1,252 +1,243 @@
-# Game Library Server
+Here’s a fresh README you can paste直接覆蓋掉 GitHub 上的 `README.md`：
 
-A simple full-stack web application built for the COMP3810SEF group project. 
-It manages a personal game collection with:
+````markdown
+# Game Library – COMP3810SEF Group Project
 
-- Web-based CRUD pages (EJS templates)
-- Login / logout using cookie-based sessions
-- RESTful JSON API for integration / testing
-- MongoDB Atlas as the cloud database
+A simple **Game Backlog Manager** built with **Node.js + Express + MongoDB (Mongoose) + EJS**.
 
----
+Users can:
 
-## 1. Features
+- Register / login with **username + password**
+- Login with **Google OAuth 2.0**
+- Manage a shared list of games (create / edit / delete)
+- Access a **RESTful JSON API** for the game data
 
-### 1.1 Authentication
-
-- Login / logout implemented with `cookie-session`
-- Hard-coded demo account:
-
-  - **Username:** `admin` 
-  - **Password:** `1234`
-
-- All `/games` routes (web pages) are **protected** and require login
-
-### 1.2 Game Management (Web CRUD)
-
-Entity: **Game**
-
-- `title` – game title (e.g. “Elden Ring”)
-- `platform` – platform (e.g. “PS5”, “Steam”)
-- `genre` – game genre (e.g. “Action RPG”)
-- `rating` – numeric rating, 0–10
-- `status` – current status: `backlog`, `playing`, or `cleared`
-
-Implemented pages (EJS):
-
-- `GET /login` – login form 
-- `POST /login` – verify credentials, create session 
-- `GET /logout` – clear session 
-
-- `GET /games` 
-  - List all games from MongoDB 
-  - Accessible only after login 
-  - Shows table with **Edit** / **Delete** actions 
-
-- `GET /games/add` 
-  - Show “Add New Game” form 
-
-- `POST /games/add` 
-  - Create new game document in MongoDB 
-
-- `GET /games/edit/:id` 
-  - Show “Edit Game” form for the selected game 
-
-- `POST /games/edit/:id` 
-  - Update selected game in MongoDB 
-
-- `POST /games/delete/:id` 
-  - Delete selected game from MongoDB 
-
-### 1.3 RESTful JSON API
-
-All API endpoints return JSON and are backed by the same MongoDB collection.
-
-- `GET /api/games` 
-  - Get all games 
-  - Optional query parameters:
-    - `status` (e.g. `status=playing`)
-    - `platform` (e.g. `platform=Steam`)
-    - `minRating` (e.g. `minRating=8`)
-
-- `GET /api/games/:id` 
-  - Get single game by MongoDB `_id`
-
-- `POST /api/games` 
-  - Create a new game 
-  - JSON body:
-    ```json
-    {
-      "title": "Elden Ring",
-      "platform": "PS5",
-      "genre": "Action RPG",
-      "rating": 9.5,
-      "status": "backlog"
-    }
-    ```
-
-- `PUT /api/games/:id` 
-  - Update a game (full update)
-
-- `DELETE /api/games/:id` 
-  - Delete a game
-
-This API can be used with `curl`, Postman, or other front-end clients.
+> Note: In the current version, the game list is **shared by all users** (not per-user library).
 
 ---
 
-## 2. Tech Stack
+## 1. Tech Stack
 
-- **Runtime:** Node.js (>= 16)
-- **Web framework:** Express.js
-- **View engine:** EJS
-- **Database:** MongoDB Atlas (cloud MongoDB)
-- **ODM:** Mongoose
-- **Session:** `cookie-session`
-- **Styling:** simple CSS (served from `/public/styles.css`)
+- **Backend:** Node.js, Express
+- **Database:** MongoDB Atlas (via Mongoose)
+- **Views:** EJS templates
+- **Auth & Session:**
+  - Local username/password (hashed with `bcrypt`)
+  - Google OAuth 2.0 (OpenID Connect ID token)
+  - `cookie-session` for session management
+- **Styling:** Custom CSS (`public/styles.css`)
+- **API Client (for demo):** `curl`
 
 ---
 
-## 3. Project Structure
+## 2. Project Structure
 
 ```text
-comp3810sef-group14/
-├── models/
-│   └── Game.js          # Mongoose schema & model for Game
-├── routes/              # (optional; not heavily used in this version)
-├── views/
-│   ├── login.ejs        # login page
-│   ├── games.ejs        # game list + Delete buttons
-│   └── game-form.ejs    # shared form for Add / Edit
-├── public/
-│   └── styles.css       # basic styling for all pages
-├── server.js            # main Express + Mongoose server
-├── package.json
-└── package-lock.json
+comp3810-game-library/
+├─ server.js               # Main Express server
+├─ package.json
+├─ package-lock.json
+├─ .gitignore
+├─ models/
+│  ├─ Game.js              # Game schema & model
+│  └─ User.js              # User schema & model (local + Google)
+├─ views/
+│  ├─ login.ejs            # Login page (local + Google)
+│  ├─ register.ejs         # Registration page
+│  ├─ games.ejs            # Game list (CRUD UI)
+│  └─ game-form.ejs        # Add / Edit game
+└─ public/
+   └─ styles.css           # Shared UI styles
 ````
 
 ---
 
-## 4. Setup & Run (Local)
+## 3. Features
 
-### 4.1 Prerequisites
+### Authentication
 
-* Node.js 16 or later
+* **Local auth**
+
+  * Users can register with a username + password
+  * Passwords are hashed with `bcrypt` before storing in MongoDB
+  * After successful login, user info is stored in a cookie session
+
+* **Google OAuth 2.0**
+
+  * “Login with Google” button on the login page
+  * Uses Google ID token (verified against `https://oauth2.googleapis.com/tokeninfo`)
+  * First-time Google login will auto-create a user in MongoDB
+
+> Sessions are stored in cookies via `cookie-session`. Logging out clears the session.
+
+### Game Library (UI)
+
+After login, users see the **Game Library** page:
+
+* List of all games in the shared library
+* “Add New Game” to create a new entry
+* “Edit” & “Delete” buttons for each row
+* Nice, consistent UI with the same style as Login / Register pages
+
+Each game has:
+
+* `title` (string)
+* `platform` (e.g. “Steam”, “PS5”)
+* `genre` (e.g. “Action RPG”)
+* `rating` (0–10, number)
+* `status` (one of `backlog`, `playing`, `cleared`)
+
+### RESTful JSON API
+
+Public JSON API (no auth required, for demo and marking):
+
+* `GET /api/games`
+  Optional query parameters:
+
+  * `status` – filter by status (`backlog`, `playing`, `cleared`)
+  * `platform` – filter by platform
+  * `minRating` – filter by rating ≥ given value
+
+* `GET /api/games/:id` – get game by MongoDB `_id`
+
+* `POST /api/games` – create a new game
+  Body (JSON):
+
+  ```json
+  {
+    "title": "Elden Ring",
+    "platform": "PS5",
+    "genre": "Action RPG",
+    "rating": 10,
+    "status": "cleared"
+  }
+  ```
+
+* `PUT /api/games/:id` – update an existing game
+
+* `DELETE /api/games/:id` – delete a game
+
+---
+
+## 4. Prerequisites
+
+* Node.js **16+**
 * npm
 * A MongoDB Atlas cluster (connection string)
+* A Google Cloud project with OAuth 2.0 credentials
+  (Web Application type, redirect URI must include your host, e.g.
+  `http://localhost:8089/auth/google/callback` in local dev)
 
-### 4.2 Clone and install
+---
+
+## 5. Setup & Run (Local)
+
+### 5.1 Clone and install
 
 ```bash
-git clone <your-repo-url> comp3810sef-group14
-cd comp3810sef-group14
+git clone https://github.com/oswinou/comp3810-game-library.git
+cd comp3810-game-library
 npm install
 ```
 
-### 4.3 Configure MongoDB connection
+### 5.2 Environment variables
 
-In `server.js`, set your MongoDB Atlas connection string:
+Create a `.env` file in the project root:
 
-```js
-const MONGODB_URI = 'YOUR_MONGODB_URI_HERE';
-mongoose.connect(MONGODB_URI)...
+```dotenv
+MONGODB_URI=mongodb+srv://<user>:<password>@<cluster>/<db>?retryWrites=true&w=majority
+
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8089/auth/google/callback
 ```
 
-> For production deployment (e.g. Azure), this can be moved to an environment
-> variable such as `process.env.MONGODB_URI`.
+> On Render / other cloud platforms, set the same names as environment variables in the dashboard.
 
-### 4.4 Run the server
+### 5.3 Start the server
 
 ```bash
+npm start
+# or
 node server.js
 ```
 
-The server will start on **[http://localhost:8089](http://localhost:8089)** by default.
+By default the app listens on:
+
+```text
+http://localhost:8089
+```
 
 ---
 
-## 5. Usage
+## 6. Usage
 
-### 5.1 Web interface
+### 6.1 Web UI
 
-1. Open `http://localhost:8089/login`
+1. Open `http://localhost:8089`
+2. You will be redirected to `/login`
+3. **First use:**
 
-2. Login with:
+   * Click **Register**, create a new username + password
+   * After registration, you are redirected to login page with a green success message
+4. Login either:
 
-   * Username: `admin`
-   * Password: `1234`
+   * With your local account, or
+   * Click **Login with Google** and complete Google sign-in
+5. After successful login, you will see the **Game Library** page
 
-3. You will be redirected to `http://localhost:8089/games`
+On the Game Library page you can:
 
-4. From there you can:
+* Click **Add New Game** to create a new entry
+* Click **Edit** to modify an existing game
+* Click **Delete** to remove a game (with a confirmation dialog)
 
-   * Add new games
-   * Edit existing games
-   * Delete games
-   * Logout
+> All users share the same game list in this version.
 
-### 5.2 Example API calls (curl)
+### 6.2 REST API with curl (examples)
 
-* Get all games:
+List all games:
 
-  ```bash
-  curl http://localhost:8089/api/games
-  ```
+```bash
+curl http://localhost:8089/api/games
+```
 
-* Filter games:
+Filter by status and minRating:
 
-  ```bash
-  curl "http://localhost:8089/api/games?status=playing&minRating=8"
-  ```
+```bash
+curl "http://localhost:8089/api/games?status=playing&minRating=8"
+```
 
-* Get one game:
+Create a game:
 
-  ```bash
-  curl http://localhost:8089/api/games/<GAME_ID>
-  ```
+```bash
+curl -X POST http://localhost:8089/api/games \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Elden Ring",
+    "platform": "PS5",
+    "genre": "Action RPG",
+    "rating": 10,
+    "status": "cleared"
+  }'
+```
 
-* Create:
+Update a game:
 
-  ```bash
-  curl -X POST http://localhost:8089/api/games \
-    -H "Content-Type: application/json" \
-    -d '{
-      "title": "Elden Ring",
-      "platform": "PS5",
-      "genre": "Action RPG",
-      "rating": 9.5,
-      "status": "backlog"
-    }'
-  ```
+```bash
+curl -X PUT http://localhost:8089/api/games/<GAME_ID> \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Elden Ring",
+    "platform": "PS5",
+    "genre": "Action RPG",
+    "rating": 9.5,
+    "status": "playing"
+  }'
+```
 
-* Update:
+Delete a game:
 
-  ```bash
-  curl -X PUT http://localhost:8089/api/games/<GAME_ID> \
-    -H "Content-Type: application/json" \
-    -d '{
-      "title": "Elden Ring",
-      "platform": "PS5",
-      "genre": "Action RPG",
-      "rating": 10,
-      "status": "cleared"
-    }'
-  ```
-
-* Delete:
-
-  ```bash
-  curl -X DELETE http://localhost:8089/api/games/<GAME_ID>
-  ```
-
----
-
-## 6. Possible Future Improvements
-
-* Real user registration and login with a `User` collection
-* Password hashing (e.g. using bcrypt)
-* Role-based access control (admin vs normal user)
-* More advanced filtering / search on the game list
-* Responsive UI with a front-end framework or CSS framework
-* Deployment to Azure App Service with environment variables
-
+```bash
+curl -X DELETE http://localhost:8089/api/games/<GAME_ID>
+```
