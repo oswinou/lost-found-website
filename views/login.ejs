@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game Library - Login</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body class="auth-body">
+  <div class="auth-card">
+    <h1 class="auth-title">Game Library Login</h1>
+
+    <% if (typeof success !== 'undefined' && success) { %>
+      <div class="auth-success"><%= success %></div>
+    <% } %>
+
+    <% if (typeof error !== 'undefined' && error) { %>
+      <div class="auth-error"><%= error %></div>
+    <% } %>
+
+    <form method="POST" action="/login" class="auth-form">
+      <label class="auth-label">Username</label>
+      <input type="text" name="username" class="auth-input" required />
+
+      <label class="auth-label">Password</label>
+      <input type="password" name="password" class="auth-input" required />
+
+      <button type="submit" class="auth-button primary">Login</button>
+    </form>
+
+    <div class="auth-divider">
+      <span>Or login with</span>
+    </div>
+
+    <!-- Google login route can be implemented later -->
+    <a href="/auth/google" class="auth-button google">
+      <span class="google-icon">G</span>
+      <span>Login with Google</span>
+    </a>
+
+    <p class="auth-footer">
+      No account?
+      <a href="/register">Register</a>
+    </p>
+  </div>
+</body>
+</html>
+
