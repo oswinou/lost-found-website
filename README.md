@@ -252,6 +252,10 @@ http://localhost:8089/api/games
   * Delete a game by `_id`.
 
 ### 7.2 curl Testing Commands (local)
+> Note: The following examples use the local URL `http://localhost:8089`.  
+> If you want to test the deployed cloud version, simply replace  
+> `http://localhost:8089` with `https://comp3810-game-library.onrender.com`
+> in all curl commands below.
 
 **GET – list all**
 
