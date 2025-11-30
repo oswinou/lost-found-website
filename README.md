@@ -1,6 +1,6 @@
 # Game Library – COMP3810SEF Group Project
 
-> **Course:** COMP3810SEF
+> **Course:** COMP3810SEF  
 > **Project Topic:** Game Library (Game Backlog Manager)  
 > **Group No.:** Group 14  
 > **Cloud URL (for testing):** https://comp3810-game-library.onrender.com
