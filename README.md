@@ -8,6 +8,7 @@ Open the project folder in terminal and run:
 
 ```bash
 npm install
+```bash
 
 Environment Setup
 
