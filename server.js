@@ -1,9 +1,6 @@
 // Load environment variables
 require('dotenv').config();
 
-const fetch = (...args) =>
-  import('node-fetch').then(({ default: fetch }) => fetch(...args));
-
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -11,15 +8,11 @@ const path = require('path');
 const session = require('cookie-session');
 const bcrypt = require('bcrypt');           // used by User model helpers
 const User = require('./models/User');
-const Game = require('./models/Game');
+const Item = require('./models/Item');
+const multer = require('multer');
+const fs = require('fs');
 
 const app = express();
-
-// Google OAuth config from env
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GOOGLE_CALLBACK_URL =
-  process.env.GOOGLE_CALLBACK_URL || 'http://localhost:8089/auth/google/callback';
 
 // View engine setup
 app.set('view engine', 'ejs');
@@ -35,7 +28,7 @@ app.use(
   session({
     name: 'session',
     // use env secret in production, fallback only for local dev
-    keys: [process.env.SESSION_SECRET || 'devSessionSecret3810'],
+    keys: [process.env.SESSION_SECRET || 'devSessionSecret3510'],
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   })
 );
@@ -61,18 +54,36 @@ function requireLogin(req, res, next) {
   next();
 }
 
+const uploadDir = path.join(__dirname, 'public', 'uploads');
+
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, uploadDir);
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    cb(null, 'item-' + uniqueSuffix + ext);
+  }
+});
+
+const upload = multer({ storage });
 // ===== Auth routes =====
 
 app.get('/', (req, res) => {
   if (req.session.user) {
-    return res.redirect('/games');
+    return res.redirect('/items');
   }
   res.redirect('/login');
 });
 
 app.get('/login', (req, res) => {
   if (req.session && req.session.user) {
-    return res.redirect('/games');
+    return res.redirect('/items');
   }
 
   let error = null;
@@ -108,10 +119,11 @@ app.post('/login', async (req, res) => {
 
     req.session.user = {
       id: user._id,
-      username: user.username
+      username: user.username,
+      role: user.role || 'user'
     };
 
-    res.redirect('/games');
+    res.redirect('/items');
   } catch (err) {
     console.error(err);
     res.status(500).render('login', {
@@ -128,7 +140,7 @@ app.get('/logout', (req, res) => {
 
 app.get('/register', (req, res) => {
   if (req.session && req.session.user) {
-    return res.redirect('/games');
+    return res.redirect('/items');
   }
   res.render('register', { error: null });
 });
@@ -175,298 +187,249 @@ app.post('/register', async (req, res) => {
   }
 });
 
-// ===== Google OAuth2 login =====
-
-app.get('/auth/google', (req, res) => {
-  // If already logged in, go straight to games
-  if (req.session && req.session.user) {
-    return res.redirect('/games');
-  }
-
-  const params = new URLSearchParams({
-    client_id: GOOGLE_CLIENT_ID,
-    redirect_uri: GOOGLE_CALLBACK_URL,
-    response_type: 'code',
-    scope: 'openid email profile',
-    access_type: 'online',
-    prompt: 'select_account'
-  });
-
-  const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-  res.redirect(authUrl);
-});
-
-app.get('/auth/google/callback', async (req, res) => {
-  const code = req.query.code;
-  const error = req.query.error;
-
-  if (error) {
-    console.error('Google OAuth error:', error);
-    return res.redirect('/login?error=google');
-  }
-
-  if (!code) {
-    return res.redirect('/login?error=google');
-  }
-
-  try {
-    // Exchange code for tokens
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code,
-        client_id: GOOGLE_CLIENT_ID,
-        client_secret: GOOGLE_CLIENT_SECRET,
-        redirect_uri: GOOGLE_CALLBACK_URL,
-        grant_type: 'authorization_code'
-      })
-    });
-
-    const tokenData = await tokenRes.json();
-
-    if (!tokenData.id_token) {
-      console.error('No id_token from Google:', tokenData);
-      return res.redirect('/login?error=google');
-    }
-
-    // Decode id_token (JWT) payload
-    const [, payloadPart] = tokenData.id_token.split('.');
-    const payloadJson = Buffer.from(payloadPart, 'base64').toString('utf8');
-    const payload = JSON.parse(payloadJson);
-
-    const googleId = payload.sub;
-    const email = payload.email;
-    const displayName = payload.name || email;
-
-    // Find or create user
-    let user = await User.findOne({ provider: 'google', googleId });
-
-    if (!user) {
-      user = await User.create({
-        username: email,
-        provider: 'google',
-        googleId
-      });
-    }
-
-    // Put into session (same shape as local login)
-    req.session.user = {
-      id: user._id,
-      username: user.username || displayName
-    };
-
-    res.redirect('/games');
-  } catch (err) {
-    console.error('Google OAuth callback error:', err);
-    res.redirect('/login?error=google');
-  }
-});
-
 // ===== Game CRUD routes (protected) =====
 
-// List games
-app.get('/games', requireLogin, async (req, res) => {
+// Get item routes
+app.get('/items', requireLogin, async (req, res) => {
   try {
-    const games = await Game.find().sort({ title: 1 });
-    res.render('games', { games, user: req.session.user });
+    const { keyword, type, category, page, perPage } = req.query;
+    const filter = {};
+
+    if (type && type.trim() !== '') {
+      filter.type = type.trim();
+    }
+
+    if (category && category.trim() !== '') {
+      filter.category = new RegExp(category.trim(), 'i');
+    }
+
+    if (keyword && keyword.trim() !== '') {
+      filter.$or = [
+        { title: new RegExp(keyword.trim(), 'i') },
+        { description: new RegExp(keyword.trim(), 'i') },
+        { location: new RegExp(keyword.trim(), 'i') }
+      ];
+    }
+
+    const currentPage = parseInt(page) > 0 ? parseInt(page) : 1;
+    const itemsPerPage = [4, 8, 12].includes(parseInt(perPage)) ? parseInt(perPage) : 4;
+
+    const totalItems = await Item.countDocuments(filter);
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+    const safePage = Math.min(currentPage, totalPages);
+
+    const items = await Item.find(filter)
+      .populate('createdBy')
+      .sort({ createdAt: -1 })
+      .skip((safePage - 1) * itemsPerPage)
+      .limit(itemsPerPage);
+
+    res.render('items', {
+      items,
+      user: req.session.user,
+      query: {
+        keyword: keyword || '',
+        type: type || '',
+        category: category || '',
+        perPage: itemsPerPage
+      },
+      pagination: {
+        currentPage: safePage,
+        totalPages,
+        totalItems,
+        itemsPerPage
+      }
+    });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error loading games');
+    res.status(500).send('Error loading items');
   }
 });
 
-// Show "add new game" form
-app.get('/games/add', requireLogin, (req, res) => {
-  res.render('game-form', {
+app.get('/items/add', requireLogin, (req, res) => {
+  res.render('item-form', {
     mode: 'create',
-    game: {},
+    item: {},
     error: null
   });
 });
 
-// Handle create
-app.post('/games/add', requireLogin, async (req, res) => {
+app.post('/items/add', requireLogin, upload.single('image'), async (req, res) => {
   try {
-    const { title, platform, genre, rating, status } = req.body;
+    const { title, type, category, description, location, date, contactInfo, imageUrl } = req.body;
 
-    await Game.create({
+    const imagePath = req.file ? '/uploads/' + req.file.filename : '';
+
+    await Item.create({
       title,
-      platform,
-      genre,
-      rating: rating ? parseFloat(rating) : 0,
-      status
+      type,
+      category,
+      description,
+      location,
+      date,
+      contactInfo,
+      imageUrl,
+      imagePath,
+      createdBy: req.session.user.id
     });
 
-    res.redirect('/games');
+    res.redirect('/items');
   } catch (err) {
     console.error(err);
-    res.status(400);
-    res.render('game-form', {
+    res.status(400).render('item-form', {
       mode: 'create',
-      game: req.body,
-      error: 'Failed to create game'
+      item: req.body,
+      error: 'Failed to create item'
     });
   }
 });
 
-// Show edit form
-app.get('/games/edit/:id', requireLogin, async (req, res) => {
+app.get('/items/edit/:id', requireLogin, async (req, res) => {
   try {
-    const game = await Game.findById(req.params.id);
-    if (!game) {
-      return res.status(404).send('Game not found');
+    const item = await Item.findById(req.params.id);
+    if (!item) return res.status(404).send('Item not found');
+
+    const isAdmin = req.session.user.role === 'admin';
+    const isOwner = item.createdBy && String(item.createdBy) === String(req.session.user.id);
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).send('Permission denied');
     }
 
-    res.render('game-form', {
+    res.render('item-form', {
       mode: 'edit',
-      game,
+      item,
       error: null
     });
   } catch (err) {
     console.error(err);
-    res.status(500).send('Error loading game');
+    res.status(500).send('Error loading item');
   }
 });
 
-// Handle update
-app.post('/games/edit/:id', requireLogin, async (req, res) => {
+app.post('/items/edit/:id', requireLogin, upload.single('image'), async (req, res) => {
   try {
-    const { title, platform, genre, rating, status } = req.body;
+    const item = await Item.findById(req.params.id);
+    if (!item) return res.status(404).send('Item not found');
 
-    await Game.findByIdAndUpdate(
-      req.params.id,
-      {
-        title,
-        platform,
-        genre,
-        rating: rating ? parseFloat(rating) : 0,
-        status
-      },
-      { runValidators: true }
-    );
+    const isAdmin = req.session.user.role === 'admin';
+    const isOwner = item.createdBy && String(item.createdBy) === String(req.session.user.id);
 
-    res.redirect('/games');
-  } catch (err) {
-    console.error(err);
-    res.status(400);
-    res.render('game-form', {
-      mode: 'edit',
-      game: { ...req.body, _id: req.params.id },
-      error: 'Failed to update game'
-    });
-  }
-});
-
-// Handle delete
-app.post('/games/delete/:id', requireLogin, async (req, res) => {
-  try {
-    await Game.findByIdAndDelete(req.params.id);
-    res.redirect('/games');
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error deleting game');
-  }
-});
-
-// ===== RESTful API for Game (JSON) =====
-
-// GET /api/games?status=playing&platform=steam&minRating=8
-app.get('/api/games', async (req, res) => {
-  try {
-    const filter = {};
-
-    if (req.query.status) {
-      filter.status = req.query.status;
-    }
-    if (req.query.platform) {
-      filter.platform = req.query.platform;
-    }
-    if (req.query.minRating) {
-      filter.rating = { $gte: Number(req.query.minRating) };
+    if (!isAdmin && !isOwner) {
+      return res.status(403).send('Permission denied');
     }
 
-    const games = await Game.find(filter).sort({ title: 1 });
-    res.json(games);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch games' });
-  }
-});
+    const { title, type, category, description, location, date, contactInfo, imageUrl, status } = req.body;
 
-// GET /api/games/:id
-app.get('/api/games/:id', async (req, res) => {
-  try {
-    const game = await Game.findById(req.params.id);
-    if (!game) {
-      return res.status(404).json({ error: 'Game not found' });
-    }
-    res.json(game);
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Failed to fetch game' });
-  }
-});
-
-// POST /api/games
-app.post('/api/games', async (req, res) => {
-  try {
-    const { title, platform, genre, rating, status } = req.body;
-
-    const newGame = await Game.create({
+    const updateData = {
       title,
-      platform,
-      genre,
-      rating: rating ? parseFloat(rating) : 0,
+      type,
+      category,
+      description,
+      location,
+      date,
+      contactInfo,
+      imageUrl,
       status
+    };
+
+    // If user uploads a new image, delete the old local image first
+    if (req.file) {
+      if (item.imagePath) {
+        const oldImageFullPath = path.join(__dirname, 'public', item.imagePath.replace(/^\/+/, ''));
+
+        if (fs.existsSync(oldImageFullPath)) {
+          fs.unlinkSync(oldImageFullPath);
+        }
+      }
+
+      updateData.imagePath = '/uploads/' + req.file.filename;
+    }
+
+    await Item.findByIdAndUpdate(req.params.id, updateData, { runValidators: true });
+
+    res.redirect('/items');
+  } catch (err) {
+    console.error(err);
+    res.status(400).render('item-form', {
+      mode: 'edit',
+      item: { ...req.body, _id: req.params.id },
+      error: 'Failed to update item'
     });
-
-    res.status(201).json(newGame);
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ error: 'Failed to create game' });
   }
 });
 
-// PUT /api/games/:id
-app.put('/api/games/:id', async (req, res) => {
+app.post('/items/delete/:id', requireLogin, async (req, res) => {
   try {
-    const { title, platform, genre, rating, status } = req.body;
+    const item = await Item.findById(req.params.id);
+    if (!item) return res.status(404).send('Item not found');
 
-    const updated = await Game.findByIdAndUpdate(
-      req.params.id,
-      {
-        title,
-        platform,
-        genre,
-        rating: rating ? parseFloat(rating) : 0,
-        status
-      },
-      { new: true, runValidators: true }
-    );
+    const isAdmin = req.session.user.role === 'admin';
+    const isOwner = item.createdBy && String(item.createdBy) === String(req.session.user.id);
 
-    if (!updated) {
-      return res.status(404).json({ error: 'Game not found' });
+    if (!isAdmin && !isOwner) {
+      return res.status(403).send('Permission denied');
     }
 
-    res.json(updated);
+    if (item.imagePath) {
+      const imageFullPath = path.join(__dirname, 'public', item.imagePath.replace(/^\/+/, ''));
+
+      if (fs.existsSync(imageFullPath)) {
+        fs.unlinkSync(imageFullPath);
+      }
+    }
+
+    await Item.findByIdAndDelete(req.params.id);
+    res.redirect('/items');
   } catch (err) {
     console.error(err);
-    res.status(400).json({ error: 'Failed to update game' });
+    res.status(500).send('Error deleting item');
   }
 });
 
-// DELETE /api/games/:id
-app.delete('/api/games/:id', async (req, res) => {
+app.post('/items/resolve/:id', requireLogin, async (req, res) => {
   try {
-    const deleted = await Game.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ error: 'Game not found' });
+    const item = await Item.findById(req.params.id);
+    if (!item) return res.status(404).send('Item not found');
+
+    const isAdmin = req.session.user.role === 'admin';
+    const isOwner = item.createdBy && String(item.createdBy) === String(req.session.user.id);
+
+    if (!isAdmin && !isOwner) {
+      return res.status(403).send('Permission denied');
     }
-    res.json({ message: 'Game deleted' });
+
+    await Item.findByIdAndUpdate(req.params.id, { status: 'resolved' });
+    res.redirect('/items');
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Failed to delete game' });
+    res.status(500).send('Error updating item status');
+  }
+});
+
+app.get('/items/:id', async (req, res) => {
+  try {
+    const item = await Item.findById(req.params.id).populate('createdBy');
+
+    if (!item) {
+      return res.status(404).send('Item not found');
+    }
+
+    const isAdmin = req.session.user && req.session.user.role === 'admin';
+    const isOwner =
+      req.session.user &&
+      item.createdBy &&
+      String(item.createdBy._id) === String(req.session.user.id);
+
+    res.render('item-detail', {
+      item,
+      user: req.session.user || null,
+      isAdmin,
+      isOwner
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).send('Error loading item detail');
   }
 });
 

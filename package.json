@@ -1,10 +1,10 @@
 {
-  "name": "comp3810sef-group14",
+  "name": "lost-found-website",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Lost & Found Website for COMP3510SEF project",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -15,7 +15,9 @@
     "dotenv": "^17.2.3",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
+    "mongodb": "^7.1.0",
     "mongoose": "^8.20.1",
+    "multer": "^2.1.1",
     "node-fetch": "^3.3.2"
   }
 }

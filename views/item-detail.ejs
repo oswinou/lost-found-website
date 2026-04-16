@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= item.title %> | Lost & Found</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1><%= item.title %></h1>
+      <p>Detailed item record and status information.</p>
+    </div>
+
+    <div class="top-bar">
+      <div class="user-info">
+        <% if (user) { %>
+          Logged in as: <strong><%= user.username %></strong>
+          <% if (user.role) { %>
+            (<%= user.role %>)
+          <% } %>
+          | <a href="/logout">Logout</a>
+        <% } else { %>
+          <a href="/login">Login</a> | <a href="/register">Register</a>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="item-card" style="padding: 28px;">
+      <div class="badge-row">
+        <span class="badge <%= item.type === 'lost' ? 'badge-lost' : 'badge-found' %>">
+          <%= item.type %>
+        </span>
+
+        <span class="badge <%= item.status === 'resolved' ? 'badge-resolved' : 'badge-active' %>">
+          <%= item.status %>
+        </span>
+      </div>
+
+      <div class="meta-grid" style="margin-top: 10px;">
+        <div class="meta-item"><strong>Category:</strong> <%= item.category %></div>
+        <div class="meta-item"><strong>Location:</strong> <%= item.location %></div>
+        <div class="meta-item"><strong>Date:</strong> <%= new Date(item.date).toLocaleDateString() %></div>
+        <div class="meta-item"><strong>Contact:</strong> <%= item.contactInfo %></div>
+      </div>
+
+      <div class="item-description" style="margin-top: 18px;">
+        <strong>Description:</strong><br>
+        <%= item.description %>
+      </div>
+
+        <% if (item.imagePath || item.imageUrl) { %>
+        <div class="detail-image-wrap">
+            <img
+            class="item-image"
+            src="<%= item.imagePath || item.imageUrl %>"
+            alt="item image"
+            >
+        </div>
+        <% } %>
+
+      <% if (item.createdBy) { %>
+        <div class="helper-text" style="margin-top: 18px;">
+          Posted by: <strong><%= item.createdBy.username || 'User' %></strong>
+        </div>
+      <% } %>
+
+      <% if (isAdmin || isOwner) { %>
+        <div class="card-actions">
+          <a class="secondary-btn" href="/items/edit/<%= item._id %>">Edit</a>
+
+          <form class="inline-form" method="POST" action="/items/delete/<%= item._id %>">
+            <button class="danger-btn" type="submit" onclick="return confirm('Delete this item?')">
+              Delete
+            </button>
+          </form>
+
+          <% if (item.status !== 'resolved') { %>
+            <form class="inline-form" method="POST" action="/items/resolve/<%= item._id %>">
+              <button class="success-btn" type="submit">Mark Resolved</button>
+            </form>
+          <% } %>
+        </div>
+      <% } %>
+    </div>
+
+    <div class="detail-back-wrap">
+        <a class="detail-back-link" href="/items">Back to Items</a>
+    </div>
+  </div>
+</body>
+</html>

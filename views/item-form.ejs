@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title><%= mode === 'edit' ? 'Edit Item' : 'Add New Item' %></title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <div class="page-header">
+      <h1><%= mode === 'edit' ? 'Edit Item' : 'Add New Item' %></h1>
+      <p>Create a clear and organized lost or found record.</p>
+    </div>
+
+    <div class="form-card">
+      <% if (error) { %>
+        <p class="error-text"><%= error %></p>
+      <% } %>
+
+      <form method="POST" action="<%= mode === 'edit' ? '/items/edit/' + item._id : '/items/add' %>" enctype="multipart/form-data">
+        <div class="form-grid two-col">
+          <div>
+            <label>Title</label>
+            <input type="text" name="title" value="<%= item.title || '' %>" required>
+          </div>
+
+          <div>
+            <label>Type</label>
+            <select name="type" required>
+              <option value="">-- Select --</option>
+              <option value="lost" <%= item.type === 'lost' ? 'selected' : '' %>>Lost</option>
+              <option value="found" <%= item.type === 'found' ? 'selected' : '' %>>Found</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Category</label>
+            <input type="text" name="category" value="<%= item.category || '' %>" required>
+          </div>
+
+          <div>
+            <label>Date</label>
+            <input type="date" name="date" value="<%= item.date ? new Date(item.date).toISOString().split('T')[0] : '' %>" required>
+          </div>
+
+          <div>
+            <label>Location</label>
+            <input type="text" name="location" value="<%= item.location || '' %>" required>
+          </div>
+
+          <div>
+            <label>Contact Info</label>
+            <input type="text" name="contactInfo" value="<%= item.contactInfo || '' %>" required>
+          </div>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label>Description</label>
+          <textarea name="description" required><%= item.description || '' %></textarea>
+        </div>
+
+        <div style="margin-top:16px;">
+          <label>Image URL (optional)</label>
+          <input type="text" name="imageUrl" value="<%= item.imageUrl || '' %>">
+        </div>
+
+        <div style="margin-top:16px;">
+          <label>Upload Image (optional)</label>
+          <input type="file" name="image" accept="image/*">
+        </div>
+
+        <% if (mode === 'edit') { %>
+          <div style="margin-top:16px;">
+            <label>Status</label>
+            <select name="status">
+              <option value="active" <%= item.status === 'active' ? 'selected' : '' %>>Active</option>
+              <option value="resolved" <%= item.status === 'resolved' ? 'selected' : '' %>>Resolved</option>
+            </select>
+          </div>
+        <% } %>
+
+        <div class="button-row">
+          <button class="primary-btn" type="submit">
+            <%= mode === 'edit' ? 'Update Item' : 'Create Item' %>
+          </button>
+          <a class="secondary-btn" href="/items">Cancel</a>
+        </div>
+      </form>
+    </div>
+  </div>
+</body>
+</html>

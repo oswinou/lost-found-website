@@ -1,47 +1,82 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Game Library - Login</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <meta charset="UTF-8">
+  <title>Login | Lost & Found Website</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="auth-body">
-  <div class="auth-card">
-    <h1 class="auth-title">Game Library Login</h1>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-shell">
+      <div class="auth-grid">
+        <div class="auth-showcase">
+          <h1>Lost & Found Website</h1>
+          <p>
+            Report lost items, browse found items, and manage item status in one simple platform.
+          </p>
 
-    <% if (typeof success !== 'undefined' && success) { %>
-      <div class="auth-success"><%= success %></div>
-    <% } %>
+          <div class="mini-board">
+            <div class="mini-board-title">Platform Features</div>
 
-    <% if (typeof error !== 'undefined' && error) { %>
-      <div class="auth-error"><%= error %></div>
-    <% } %>
+            <div class="mini-item">
+              <div>
+                <strong>Post Lost / Found Items</strong>
+                <small>Create clear item records in seconds</small>
+              </div>
+              <span class="badge badge-found">Post</span>
+            </div>
 
-    <form method="POST" action="/login" class="auth-form">
-      <label class="auth-label">Username</label>
-      <input type="text" name="username" class="auth-input" required />
+            <div class="mini-item">
+              <div>
+                <strong>Search and Filter</strong>
+                <small>Find records by keyword, type, and category</small>
+              </div>
+              <span class="badge badge-active">Search</span>
+            </div>
 
-      <label class="auth-label">Password</label>
-      <input type="password" name="password" class="auth-input" required />
+            <div class="mini-item">
+              <div>
+                <strong>Manage Status</strong>
+                <small>Update, resolve, and track item posts</small>
+              </div>
+              <span class="badge badge-lost">Track</span>
+            </div>
+          </div>
+        </div>
 
-      <button type="submit" class="auth-button primary">Login</button>
-    </form>
+        <div class="auth-card">
+          <h2>Login</h2>
 
-    <div class="auth-divider">
-      <span>Or login with</span>
+          <% if (error) { %>
+            <p class="error-text"><%= error %></p>
+          <% } %>
+
+          <% if (success) { %>
+            <p style="color:#16a34a; font-weight:700;"><%= success %></p>
+          <% } %>
+
+          <form method="POST" action="/login">
+            <div style="margin-bottom:16px;">
+              <label>Username</label>
+              <input type="text" name="username" required>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <label>Password</label>
+              <input type="password" name="password" required>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-btn" type="submit">Login</button>
+            </div>
+          </form>
+
+          <p style="margin-top:22px;" class="helper-text">
+            No account? <a href="/register">Register</a>
+          </p>
+        </div>
+      </div>
     </div>
-
-    <!-- Google login route can be implemented later -->
-    <a href="/auth/google" class="auth-button google">
-      <span class="google-icon">G</span>
-      <span>Login with Google</span>
-    </a>
-
-    <p class="auth-footer">
-      No account?
-      <a href="/register">Register</a>
-    </p>
   </div>
 </body>
 </html>
-

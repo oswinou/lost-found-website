@@ -1,36 +1,84 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Game Library - Register</title>
-  <link rel="stylesheet" href="/styles.css" />
+  <meta charset="UTF-8">
+  <title>Register | Lost & Found Website</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
-<body class="auth-body">
-  <div class="auth-card">
-    <h1 class="auth-title">Create Account</h1>
+<body>
+  <div class="auth-wrap">
+    <div class="auth-shell">
+      <div class="auth-grid">
+        <div class="auth-showcase">
+          <h1>Create Your Account</h1>
+          <p>
+            Join the platform to post lost items, report found items, and manage your
+            own records in a simple and organized way.
+          </p>
 
-    <% if (typeof error !== 'undefined' && error) { %>
-      <div class="auth-error"><%= error %></div>
-    <% } %>
+          <div class="mini-board">
+            <div class="mini-board-title">Why register?</div>
 
-    <form method="POST" action="/register" class="auth-form">
-      <label class="auth-label">Username</label>
-      <input type="text" name="username" class="auth-input" required />
+            <div class="mini-item">
+              <div>
+                <strong>Post items</strong>
+                <small>Create lost or found reports quickly</small>
+              </div>
+              <span class="badge badge-found">New</span>
+            </div>
 
-      <label class="auth-label">Password</label>
-      <input type="password" name="password" class="auth-input" required />
+            <div class="mini-item">
+              <div>
+                <strong>Manage status</strong>
+                <small>Edit, resolve, and track your own posts</small>
+              </div>
+              <span class="badge badge-active">Manage</span>
+            </div>
 
-      <label class="auth-label">Confirm Password</label>
-      <input type="password" name="confirmPassword" class="auth-input" required />
+            <div class="mini-item">
+              <div>
+                <strong>Search records</strong>
+                <small>Filter by keyword, type, and category</small>
+              </div>
+              <span class="badge badge-lost">Search</span>
+            </div>
+          </div>
+        </div>
 
-      <button type="submit" class="auth-button primary">Register</button>
-    </form>
+        <div class="auth-card">
+          <h2>Register</h2>
 
-    <p class="auth-footer">
-      Already have an account?
-      <a href="/login">Back to login</a>
-    </p>
+          <% if (error) { %>
+            <p class="error-text"><%= error %></p>
+          <% } %>
+
+          <form method="POST" action="/register">
+            <div style="margin-bottom:16px;">
+              <label>Username</label>
+              <input type="text" name="username" required>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <label>Password</label>
+              <input type="password" name="password" required>
+            </div>
+
+            <div style="margin-bottom:16px;">
+              <label>Confirm Password</label>
+              <input type="password" name="confirmPassword" required>
+            </div>
+
+            <div class="button-row">
+              <button class="primary-btn" type="submit">Create Account</button>
+            </div>
+          </form>
+
+          <p style="margin-top:22px;" class="helper-text">
+            Already have an account? <a href="/login">Login</a>
+          </p>
+        </div>
+      </div>
+    </div>
   </div>
 </body>
 </html>
-
