@@ -2,6 +2,9 @@
 
 COMP3510SEF Group Project
 
+This is a simple web-based Lost & Found system.
+Users can create lost or found item posts, search records, view item details, and manage item status.
+
 ## Install
 
 Open the project folder in terminal and run:
@@ -43,4 +46,3 @@ http://localhost:8089
 
 - This project is designed to run locally.
 - Uploaded images are stored in `public/uploads`.
-- Google login has been removed in this local version.
